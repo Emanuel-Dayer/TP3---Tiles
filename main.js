@@ -3,8 +3,8 @@ import Nivel1 from "./scenes/Nivel-1.js";
 // Create a new Phaser config object
 const config = {
   type: Phaser.AUTO,
-  width: 630,
-  height: 630,
+  width: 200,
+  height: 200,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -20,7 +20,7 @@ const config = {
   physics: {
     default: "arcade",
     arcade: {
-      gravity: { y: 200 },
+      gravity: { y: 0 },
       debug: true,
     },
   },
@@ -32,3 +32,12 @@ const config = {
 
 // Create a new Phaser game instance
 window.game = new Phaser.Game(config);
+
+// Forzar vecino más cercano en el canvas HTML, para que los píxeles se vean nítidos
+window.addEventListener('DOMContentLoaded', () => {
+  const canvases = document.getElementsByTagName('canvas');
+  for (let canvas of canvases) {
+    canvas.style.imageRendering = 'pixelated';
+    canvas.style.imageRendering = 'crisp-edges';
+  }
+});

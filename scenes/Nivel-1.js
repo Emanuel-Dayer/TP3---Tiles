@@ -1,158 +1,148 @@
-// URL to explain PHASER scene: https://rexrainbow.github.io/phaser3-rex-notes/docs/site/scene/
-
 export default class Game extends Phaser.Scene {
   constructor() {
     super("Nivel1");
   }
 
   init() {
-    this.score = 0;
+    this.puntaje = 0;
+    this.Velocidad = 180;
+
+    // teclas de movimiento y reinicio
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
   }
 
   preload() {
     this.load.tilemapTiledJSON("map", "public/assets/tilemap/map.json");
     this.load.image("tileset", "public/assets/texture.png");
-    this.load.image("star", "public/assets/star.png");
-
-    this.load.spritesheet("dude", "./public/assets/dude.png", {
-      frameWidth: 32,
-      frameHeight: 48,
+    this.load.spritesheet("tileset_sprites", "public/assets/texture.png", {
+      frameWidth: 18,
+      frameHeight: 18,
     });
   }
 
   create() {
+    // Desactivar suavizado para todas las texturas (pixel art)
+    this.textures.get('tileset').setFilter(Phaser.Textures.FilterMode.NEAREST);
+    this.textures.get('tileset_sprites').setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    // Crear el tilemap y las capas
     const map = this.make.tilemap({ key: "map" });
-
-    // Parameters are the name you gave the tileset in Tiled and then the key of the tileset image in
-    // Phaser's cache (i.e. the name you used in preload)
     const tileset = map.addTilesetImage("tileset", "tileset");
+    const capaFondo = map.createLayer("suelo", tileset, 0, 0);
+    const capaParedes = map.createLayer("Pared", tileset, 0, 0);
+    const capaObjetos = map.getObjectLayer("Objetos");
 
-    // Parameters: layer name (or index) from Tiled, tileset, x, y
-    const belowLayer = map.createLayer("suelo", tileset, 0, 0);
-    const platformLayer = map.createLayer("Pared", tileset, 0, 0);
-    const objectsLayer = map.getObjectLayer("Objetos");
+    // Crear el personaje en el punto de spawn
+    const SpawnPersonaje = map.findObject("Objetos", (obj) => obj.name === "Personaje");
+    this.personaje = this.physics.add.sprite(SpawnPersonaje.x, SpawnPersonaje.y, "tileset_sprites", 1);
+    this.personaje.body.setCollideWorldBounds(false);
 
-    // Find in the Object Layer, the name "dude" and get position
-    const spawnPoint = map.findObject(
-      "Objetos",
-      (obj) => obj.name === "player"
-    );
-    console.log("spawnPoint", spawnPoint);
+    // Colisiones con paredes
+    capaParedes.setCollisionByProperty({ colisionable: true });
+    this.physics.add.collider(this.personaje, capaParedes);
 
-    this.player = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, "dude");
+    // Grupos de monedas y metas
+    this.monedas = this.physics.add.group();
+    this.targets = this.physics.add.group();
 
-    this.player.setBounce(0.2);
-    this.player.setCollideWorldBounds(true);
-
-    this.anims.create({
-      key: "left",
-      frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    this.anims.create({
-      key: "turn",
-      frames: [{ key: "dude", frame: 4 }],
-      frameRate: 20,
-    });
-
-    this.anims.create({
-      key: "right",
-      frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-
-    platformLayer.setCollisionByProperty({ esColisionable: true });
-    this.physics.add.collider(this.player, platformLayer);
-
-    // tiles marked as colliding
-    /*
-    const debugGraphics = this.add.graphics().setAlpha(0.75);
-    platformLayer.renderDebug(debugGraphics, {
-      tileColor: null, // Color of non-colliding tiles
-      collidingTileColor: new Phaser.Display.Color(243, 134, 48, 255), // Color of colliding tiles
-      faceColor: new Phaser.Display.Color(40, 39, 37, 255), // Color of colliding face edges
-    });
-    */
-
-    // Create empty group of starts
-    this.stars = this.physics.add.group();
-
-    // find object layer
-    // if type is "stars", add to stars group
-    objectsLayer.objects.forEach((objData) => {
-      console.log(objData);
-      const { x = 0, y = 0, name, type } = objData;
-      switch (type) {
-        case "star": {
-          // add star to scene
-          // console.log("estrella agregada: ", x, y);
-          const star = this.stars.create(x, y, "star");
-          star.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-          break;
-        }
+    // Crear monedas y metas desde el layer de objetos
+    capaObjetos.objects.forEach((objData) => {
+      const { x = 0, y = 0, name } = objData;
+      if (name === "Moneda") {
+        this.monedas.create(x, y, "tileset_sprites", 3);
+      }
+      if (name === "Meta") {
+        this.targets.create(x, y, "tileset_sprites", 2);
       }
     });
 
-    // add collision between player and stars
-    this.physics.add.collider(
-      this.player,
-      this.stars,
-      this.collectStar,
+    // Overlaps y colisiones
+    // Overlap entre personaje y monedas
+    this.physics.add.overlap(
+      this.personaje,
+      this.monedas,
+      this.juntarMoneda,
       null,
       this
     );
-    // add overlap between stars and platform layer
-    this.physics.add.collider(this.stars, platformLayer);
 
-    this.scoreText = this.add.text(16, 16, `Score: ${this.score}`, {
-      fontSize: "32px",
+    // Colisión entre monedas y paredes
+    this.physics.add.collider(this.monedas, capaParedes);
+
+    // Overlap con la meta
+    this.physics.add.overlap(
+      this.personaje,
+      this.targets,
+      this.colisionMeta,
+      null,
+      this
+    );
+
+    // Texto y camara
+    // Texto de puntaje fijo en pantalla
+    this.textoPuntaje = this.add.text(5, 5, `Puntaje: ${this.puntaje}`, {
+      fontSize: "18px",
+      fontStyle: "bold",
       fill: "#000",
-    });
+      fontFamily: 'arial, sans-serif',
+    }).setScrollFactor(0); // No se mueve con la cámara
+
+    // Cámara que sigue al personaje
+    this.cameras.main.startFollow(this.personaje);
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
   update() {
-    // update game objects
-    if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-160);
-
-      this.player.anims.play("left", true);
-    } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(160);
-
-      this.player.anims.play("right", true);
-    } else {
-      this.player.setVelocityX(0);
-
-      this.player.anims.play("turn");
+    // Movimiento
+    this.personaje.setVelocity(0);
+    if (this.cursors.up.isDown || this.keyW.isDown) {
+      this.personaje.setVelocityY(-this.Velocidad);
+    }
+    if (this.cursors.down.isDown || this.keyS.isDown) {
+      this.personaje.setVelocityY(this.Velocidad);
+    }
+    if (this.cursors.left.isDown || this.keyA.isDown) {
+      this.personaje.setVelocityX(-this.Velocidad);
+      this.personaje.flipX = false; // Mirar a la derecha
+    }
+    if (this.cursors.right.isDown || this.keyD.isDown) {
+      this.personaje.setVelocityX(this.Velocidad);
+      this.personaje.flipX = true; // Mirar a la izquierda
     }
 
-    if (this.cursors.up.isDown) {
-      this.player.setVelocityY(-330);
-    }
-
+    // Reiniciar el juego con la tecla R
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) {
-      console.log("Phaser.Input.Keyboard.JustDown(this.keyR)");
       this.scene.restart();
     }
   }
 
-  collectStar(player, star) {
-    star.disableBody(true, true);
+  juntarMoneda(personaje, moneda) {
+    moneda.disableBody(true, true);
+    this.puntaje += 10;
+    this.textoPuntaje.setText(`Puntaje: ${this.puntaje}`);
+  }
 
-    this.score += 10;
-    this.scoreText.setText(`Score: ${this.score}`);
+  colisionMeta(personaje, targets) {
+    // Mostrar texto de victoria centrado
+    const textoVictoria = this.add.text(
+      this.cameras.main.worldView.centerX,
+      this.cameras.main.worldView.centerY,
+      "¡Victoria!",
+      {
+        fontSize: "32px",
+        fill: "#fff",
+        fontStyle: "bold",
+        stroke: "#000",
+        strokeThickness: 6,
+      }
+    ).setOrigin(0.5, 0.5);
 
-    if (this.stars.countActive(true) === 0) {
-      //  A new batch of stars to collect
-      this.stars.children.iterate(function (child) {
-        child.enableBody(true, child.x, 0, true, true);
-      });
-    }
+    this.personaje.setTint(0x00ff00); // Cambiar color para indicar victoria
   }
 }
+
