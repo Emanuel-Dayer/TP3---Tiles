@@ -2,7 +2,7 @@
 
 export default class Game extends Phaser.Scene {
   constructor() {
-    super("game");
+    super("Nivel1");
   }
 
   init() {
@@ -28,8 +28,8 @@ export default class Game extends Phaser.Scene {
     const tileset = map.addTilesetImage("tileset", "tileset");
 
     // Parameters: layer name (or index) from Tiled, tileset, x, y
-    const belowLayer = map.createLayer("Fondo", tileset, 0, 0);
-    const platformLayer = map.createLayer("Plataformas", tileset, 0, 0);
+    const belowLayer = map.createLayer("suelo", tileset, 0, 0);
+    const platformLayer = map.createLayer("Pared", tileset, 0, 0);
     const objectsLayer = map.getObjectLayer("Objetos");
 
     // Find in the Object Layer, the name "dude" and get position
