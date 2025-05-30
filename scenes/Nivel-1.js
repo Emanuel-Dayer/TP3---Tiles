@@ -6,10 +6,14 @@ export default class Game extends Phaser.Scene {
   init() {
     this.puntaje = 0;
     this.Velocidad = 180;
+    this.cantidadMonedas = 0;
+    this.physics.world.drawDebug = false; // Desactiva el modo debug
 
     // teclas de movimiento y reinicio
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.KeyESC = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.keyP = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
@@ -92,6 +96,15 @@ export default class Game extends Phaser.Scene {
       fontFamily: 'arial, sans-serif',
     }).setScrollFactor(0); // No se mueve con la cámara
 
+    // Texto monedas recolectadas
+    this.monedasarecolectar = this.monedas.countActive(true);
+    this.textoMonedas = this.add.text(5, 25, `${this.cantidadMonedas} / ${this.monedasarecolectar}`, {
+      fontSize: "18px",
+      fontStyle: "bold",
+      fill: "#000",
+      fontFamily: 'arial, sans-serif',
+    }).setScrollFactor(0); // No se mueve con la cámara
+
     // Cámara que sigue al personaje
     this.cameras.main.startFollow(this.personaje);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -119,30 +132,46 @@ export default class Game extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) {
       this.scene.restart();
     }
-  }
 
+    // Salir del juego con la tecla ESC
+    
+    /*
+    if (Phaser.Input.Keyboard.JustDown(this.KeyESC)) {
+      this.scene.start("");
+    }
+    */
+
+    // Activar/Desactivar Modo Debug
+    if (Phaser.Input.Keyboard.JustDown(this.keyP)) {
+      this.physics.world.drawDebug = !this.physics.world.drawDebug; // lo activa o desactiva según el estado
+      this.physics.world.debugGraphic.clear(); // Para que no queden cosas
+    }
+  }
   juntarMoneda(personaje, moneda) {
     moneda.disableBody(true, true);
     this.puntaje += 10;
+    this.cantidadMonedas++;
+    this.textoMonedas.setText(`${this.cantidadMonedas} / ${this.monedasarecolectar}`);
     this.textoPuntaje.setText(`Puntaje: ${this.puntaje}`);
   }
 
   colisionMeta(personaje, targets) {
-    // Mostrar texto de victoria centrado
-    const textoVictoria = this.add.text(
-      this.cameras.main.worldView.centerX,
-      this.cameras.main.worldView.centerY,
-      "¡Victoria!",
-      {
-        fontSize: "32px",
-        fill: "#fff",
-        fontStyle: "bold",
-        stroke: "#000",
-        strokeThickness: 6,
-      }
-    ).setOrigin(0.5, 0.5);
+    if (this.monedas.countActive(true) === 0) {
+      // Mostrar texto de victoria centrado
+      const textoVictoria = this.add.text(
+        this.cameras.main.worldView.centerX,
+        this.cameras.main.worldView.centerY,
+        "¡Victoria!",
+        {
+          fontSize: "32px",
+          fill: "#fff",
+          fontStyle: "bold",
+          stroke: "#000",
+          strokeThickness: 6,
+        }
+      ).setOrigin(0.5, 0.5);
 
-    this.personaje.setTint(0x00ff00); // Cambiar color para indicar victoria
+      this.personaje.setTint(0x00ff00); // Cambiar color para indicar victoria
+    }
   }
 }
-
