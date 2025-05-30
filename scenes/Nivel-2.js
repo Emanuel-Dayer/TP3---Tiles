@@ -1,14 +1,13 @@
 export default class Game extends Phaser.Scene {
   constructor() {
-    super("Nivel1");
+    super("Nivel2");
   }
 
-  init() {
-    /* Agrego una escala para que la pantalla tengo lugar para mover la camara, y si el mapa es muy chiquito
-    Se relleno por completo, no uso zoom de camara porque eso hacia que algunas cosas se vieran borrosas
-    esto es mas tedioso a la hora de ponerlo en todas las cosas, pero bueno*/
+   init(data) {
+    // recibir datos de la escena anterior
+    this.puntaje = data.puntaje;
+
     this.escala = 4; // Factor de escala
-    this.puntaje = 0;
     this.puntajeMonedas = 10;
     this.Velocidad = 180 * this.escala; // Ajustar velocidad según escala
     this.cantidadMonedas = 0;
@@ -35,7 +34,7 @@ export default class Game extends Phaser.Scene {
     this.textures.get('tileset_sprites').setFilter(Phaser.Textures.FilterMode.NEAREST);
 
     // Crear el tilemap y las capas
-    const map = this.make.tilemap({ key: "map" });
+    const map = this.make.tilemap({ key: "map2" });
     const tileset = map.addTilesetImage("tileset", "tileset");
     const capaFondo = map.createLayer("suelo", tileset, 0, 0).setScale(this.escala);
     const capaParedes = map.createLayer("Pared", tileset, 0, 0).setScale(this.escala);;
@@ -160,9 +159,7 @@ export default class Game extends Phaser.Scene {
 
   colisionMeta(personaje, targets) {
     if (this.monedas.countActive(true) === 0) {
-      this.scene.start("Nivel2", { 
-        puntaje: this.puntaje
-      });
+      this.scene.start("Nivel3", { puntaje: this.puntaje });
     }
   }
 }
